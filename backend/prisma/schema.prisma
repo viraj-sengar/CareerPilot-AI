@@ -1,0 +1,224 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  passwordHash  String?
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile           Profile?
+  userSkills        UserSkill[]
+  careerGoals       CareerGoal[]
+  roadmapPhases     RoadmapPhase[]
+  resumes           Resume[]
+  applications      Application[]
+  interviewSessions InterviewSession[]
+  projects          Project[]
+  notifications     Notification[]
+}
+
+model Profile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetRole        String   @default("Software Engineer")
+  experienceLevel   String   @default("Intermediate")
+  careerGoal        String   @default("Internship")
+  preferredLocation String   @default("Remote / India")
+  readinessScore    Int      @default(82)
+  resumeScore       Int      @default(87)
+  skillMatchScore   Int      @default(76)
+  totalApplications Int      @default(18)
+  bio               String   @default("Aspiring Software Engineer passionate about backend systems, distributed architecture, and scalable APIs.")
+  githubUrl         String?  @default("https://github.com")
+  linkedinUrl       String?  @default("https://linkedin.com")
+  portfolioUrl      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Skill {
+  id         String      @id @default(uuid())
+  name       String      @unique
+  category   String      @default("Backend")
+  icon       String?
+  inDemand   Boolean     @default(true)
+  userSkills UserSkill[]
+}
+
+model UserSkill {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId           String
+  skill             Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  proficiency       Int      @default(0) // 0 to 100
+  targetProficiency Int      @default(80)
+  status            String   @default("IN_PROGRESS") // NOT_STARTED, IN_PROGRESS, MASTERED
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, skillId])
+}
+
+model CareerGoal {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  targetDate  DateTime?
+  status      String    @default("IN_PROGRESS")
+  createdAt   DateTime  @default(now())
+}
+
+model RoadmapPhase {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phaseNumber Int
+  name        String
+  description String
+  status      String         @default("IN_PROGRESS")
+  skills      RoadmapSkill[]
+}
+
+model RoadmapSkill {
+  id             String       @id @default(uuid())
+  phaseId        String
+  phase          RoadmapPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  name           String
+  category       String
+  proficiency    Int          @default(0)
+  importance     String       @default("High") // High, Medium, Core
+  estimatedHours Int          @default(20)
+  status         String       @default("NOT_STARTED") // COMPLETED, IN_PROGRESS, NOT_STARTED
+  resourcesJson  String?      // JSON array of resources
+  projectsJson   String?      // JSON array of project ideas
+}
+
+model Resume {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName    String
+  fileUrl     String?
+  contentText String
+  uploadedAt  DateTime        @default(now())
+  analysis    ResumeAnalysis?
+}
+
+model ResumeAnalysis {
+  id               String   @id @default(uuid())
+  resumeId         String   @unique
+  resume           Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  atsScore         Int      @default(87)
+  skillsScore      Int      @default(92)
+  formattingScore  Int      @default(88)
+  experienceScore  Int      @default(80)
+  projectsScore    Int      @default(85)
+  keywordsScore    Int      @default(90)
+  strengthsJson    String   // JSON array of strings
+  improvementsJson String   // JSON array of strings
+  rewritesJson     String   // JSON array of { before, after, role }
+  analyzedAt       DateTime @default(now())
+}
+
+model Job {
+  id                  String   @id @default(uuid())
+  title               String
+  company             String
+  companyLogo         String?
+  location            String
+  jobType             String   @default("Internship") // Internship, Full-time
+  workModel           String   @default("Remote") // Remote, Hybrid, On-site
+  salaryRange         String?  @default("$6,000 - $8,500 / mo")
+  description         String
+  responsibilitiesJson String  // JSON array
+  requirementsJson    String   // JSON array
+  matchedSkillsJson   String   // JSON array
+  missingSkillsJson   String   // JSON array
+  matchPercentage     Int      @default(85)
+  externalUrl         String?
+  featured            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+}
+
+model Application {
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company           String
+  role              String
+  location          String?   @default("Remote")
+  status            String    @default("APPLIED") // APPLIED, ASSESSMENT, INTERVIEW, OFFER, REJECTED
+  salary            String?
+  appliedDate       DateTime  @default(now())
+  deadlineDate      DateTime?
+  nextInterviewDate DateTime?
+  notes             String?
+  priority          String    @default("MEDIUM") // LOW, MEDIUM, HIGH
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model InterviewSession {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         String   @default("Software Engineer")
+  type         String   @default("TECHNICAL") // TECHNICAL, BEHAVIORAL, HR, SYSTEM_DESIGN
+  difficulty   String   @default("MEDIUM") // EASY, MEDIUM, HARD
+  score        Int      @default(82)
+  feedbackJson String   // Detailed score breakdown and recommendation
+  completedAt  DateTime @default(now())
+}
+
+model Project {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  role           String        @default("Software Engineer")
+  difficulty     String        @default("Intermediate")
+  summary        String
+  whyRecommended String
+  techStackJson  String        // JSON array of skills/technologies
+  estimatedHours Int           @default(40)
+  status         String        @default("IN_PROGRESS") // NOT_STARTED, IN_PROGRESS, COMPLETED
+  githubUrl      String?
+  liveUrl        String?
+  createdAt      DateTime      @default(now())
+  tasks          ProjectTask[]
+}
+
+model ProjectTask {
+  id             String   @id @default(uuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase          String   // e.g., "1. Architecture & Setup", "2. Database"
+  title          String
+  description    String
+  codeSnippet    String?
+  estimatedHours Int      @default(4)
+  completed      Boolean  @default(false)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO") // INTERVIEW, RESUME, JOB, SKILL, PROJECT, INFO
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
